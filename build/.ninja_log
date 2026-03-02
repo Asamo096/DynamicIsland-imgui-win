@@ -1,0 +1,21 @@
+# ninja log v7
+12	2536	7940844678219901	CMakeFiles/DynamicIsland.dir/src/island.cpp.obj	321d5576fb7d4de4
+59	4026	7940926051701375	CMakeFiles/DynamicIsland.dir/src/sysinfo.cpp.obj	46270442f257f0a2
+19	7054	7940834582520892	CMakeFiles/DynamicIsland.dir/src/scheduler.cpp.obj	d63f0e8ec57aeda9
+5	2038	7940926330429012	CMakeFiles/DynamicIsland.dir/src/trayicon.cpp.obj	aa0e89b81c6fb035
+53	4380	7940926051645618	CMakeFiles/DynamicIsland.dir/src/main.cpp.obj	8aaabf7e3db5bb02
+47	5948	7940834582796792	CMakeFiles/DynamicIsland.dir/include/imgui/imgui_tables.cpp.obj	36f326c2a5a5be6f
+38	8243	7940834582715592	CMakeFiles/DynamicIsland.dir/include/imgui/imgui_draw.cpp.obj	af6ad1696fbd879e
+65	5646	7940834582983498	CMakeFiles/DynamicIsland.dir/include/imgui/imgui_demo.cpp.obj	24afd4660367340c
+33	10604	7940834582663490	CMakeFiles/DynamicIsland.dir/include/imgui/imgui.cpp.obj	606f6704a9b6e205
+71	4418	7940834583039308	CMakeFiles/DynamicIsland.dir/include/imgui/backends/imgui_impl_win32.cpp.obj	842d4871208095e2
+57	9031	7940834582903429	CMakeFiles/DynamicIsland.dir/include/imgui/imgui_widgets.cpp.obj	8e64b146cfd767ae
+77	6508	7940834583109002	CMakeFiles/DynamicIsland.dir/include/imgui/backends/imgui_impl_dx11.cpp.obj	3febc5cb2bc606ed
+2853	3303	7940920104047608	DynamicIsland.exe	3dec031e74dc30
+71	4145	7940926051822101	CMakeFiles/DynamicIsland.dir/src/config.cpp.obj	888f832d1ee53956
+2	597	7940926693500496	build.ninja	2b115178ed18fb00
+2	597	7940926693482843	D:/DynamicIsland/build/cmake_install.cmake	2b115178ed18fb00
+39	50	7940831091310289	clean	a0dcf9d55d06b1ca
+2	134	7940926693500496	build.ninja	2b115178ed18fb00
+2	134	7940926693500496	D:/DynamicIsland/build/cmake_install.cmake	2b115178ed18fb00
+28	433	7940926694122203	DynamicIsland.exe	d5d009c99610c825
