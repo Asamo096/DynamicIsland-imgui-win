@@ -1,11 +1,22 @@
 # DynamicIsland-imgui-win
 
-一个模仿苹果灵动岛设计的 Windows 系统监控工具，使用 ImGui 和 DirectX 11 开发。
+一个基于 Dear ImGui 和 Direct3D11 的 Windows 桌面应用，模拟 macOS 上的 "灵动岛"（Dynamic Island）效果并在其中显示系统监控信息。
+
+## 项目地址
+
+本项目是 Python-island 主项目的 imgui 分支：
+[https://github.com/Python-island/Python-island/tree/pyisland-imgui](https://github.com/Python-island/Python-island/tree/pyisland-imgui)
 
 ## 功能特性
 
 ### 核心功能
-- **实时系统监控**：CPU、内存、GPU、网络、电池等系统信息
+- **实时系统监控**：
+  - CPU / 每核利用率与频率
+  - GPU 利用率、显存、温度（支持 NVIDIA/AMD/Intel）
+  - 内存使用情况
+  - 电池状态与剩余时间
+  - 网络带宽统计（可启用）
+  - 时间显示（可显示秒）
 - **灵动岛界面**：模仿苹果灵动岛的动态交互界面
 - **状态栏托盘**：系统托盘图标，提供快捷操作
 - **设置系统**：独立的设置窗口，支持分类配置
@@ -15,47 +26,51 @@
 - **透明效果**：半透明背景，融入桌面环境
 - **平滑动画**：展开/收起动画效果
 - **响应式设计**：根据系统状态自动调整
-- **主题支持**：预留主题配置接口
+- **主题支持**：暗色/亮色主题、磨砂/液体玻璃样式
+- **自定义选项**：字体、颜色、圆角等可配置
 
 ## 系统要求
 
-- **操作系统**：Windows 10 或 Windows 11
-- **架构**：64位系统
-- **DirectX**：DirectX 11 或更高版本
-- **内存**：至少 512MB 可用内存
-- **CPU**：支持 SSE2 指令集的处理器
+- **操作系统**：Windows 10 或 Windows 11（32/64 位）
+- **工具链**：
+  - CMake ≥ 3.20
+  - Ninja（或其他生成器）
+  - MinGW‑w64/GCC（g++）
+  - 或 Visual Studio 2019+
+- **依赖**：
+  - Direct3D 11（系统自带）
+  - Windows SDK（包含 DWM、taskschd、Pdh、iphlpapi 等）
+  - ImGui（已随仓库提供）
 
-## 安装方法
+## 构建方法
 
-### 方法 1：使用预编译版本
-1. 从 [Releases](https://github.com/Asamo096/DynamicIsland-imgui-win/releases) 下载最新版本
-2. 解压到任意目录
-3. 运行 `DynamicIsland.exe` 即可
+### 从源码构建
 
-### 方法 2：从源码构建
-1. **安装依赖**：
-   - Visual Studio 2019 或更高版本
-   - CMake 3.16 或更高版本
-   - DirectX SDK
-
-2. **克隆仓库**：
+1. **克隆仓库**：
    ```bash
-   git clone https://github.com/Asamo096/DynamicIsland-imgui-win.git
-   cd DynamicIsland-imgui-win
+   git clone https://github.com/Python-island/Python-island.git
+   cd Python-island
+   git checkout pyisland-imgui
    ```
 
-3. **构建项目**：
+2. **构建项目**：
    ```bash
    mkdir build
    cd build
-   cmake .. -G "Visual Studio 16 2019"
-   cmake --build . --config Release
+   cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+   cmake --build .
    ```
 
-4. **运行程序**：
+3. **运行程序**：
+   生成的可执行文件 `DynamicIsland.exe` 会包含在 `build/` 目录中。
+
+4. **调试构建**：
    ```bash
-   ./Release/DynamicIsland.exe
+   cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ..
+   cmake --build .
    ```
+
+> 注意：当前 CMakeLists.txt 硬编码了 MinGW 路径，在其他环境下请移除或修改相应变量。
 
 ## 使用方法
 
@@ -104,7 +119,77 @@
 
 ## 配置文件
 
-程序会在运行目录生成配置文件 `config.json`，可手动编辑调整参数。
+程序使用 `config.json`（默认与可执行文件同目录）保存设置。第一次运行会自动创建默认配置，格式如下：
+
+```json
+{
+  "island": {
+    "position": "top-center",
+    "offset_x": 0,
+    "offset_y": 20,
+    "idle_width": 120,
+    "idle_height": 40,
+    "expanded_width": 380,
+    "expanded_height": 450,
+    "animation_speed": 12.0,
+    "auto_hide_delay": 5.0,
+    "show_seconds": false
+  },
+  "appearance": {
+    "theme": "dark",
+    "accent_color": "#0078D4",
+    "opacity": 0.95,
+    "corner_radius": 20.0,
+    "shadow_enabled": true,
+    "blur_enabled": true,
+    "font_size": 16,
+    "font_family": "Noto Sans CJK SC",
+    "style": "frosted"
+  },
+  "system": {
+    "update_interval_ms": 1000,
+    "cpu_enabled": true,
+    "gpu_enabled": true,
+    "memory_enabled": true,
+    "battery_enabled": true,
+    "network_enabled": false
+  },
+  "behavior": {
+    "start_with_windows": true,
+    "start_minimized": false,
+    "silent_mode": false,
+    "game_mode_detection": true,
+    "notification_enabled": true,
+    "max_notifications": 5
+  }
+}
+```
+
+所有字段在代码 `include/config.h` 定义。编辑完成后重启程序或通过 UI 生效。
+
+## 项目结构
+
+```
+/
+├─ CMakeLists.txt
+├─ include/imgui/      # Dear ImGui 源码
+├─ src/                # 应用源代码
+│   ├ config.*
+│   ├ sysinfo.*
+│   ├ scheduler.*
+│   ├ trayicon.*
+│   └ main.cpp
+├─ assets/             # 字体、图标等资源
+├─ LICENSE             # AGPL‑3.0
+└─ README.md           # 本文档
+```
+
+### 主要模块
+- **config**：管理 config.json，定义配置结构体
+- **sysinfo**：后台线程采集系统指标并暴露给 UI
+- **trayicon**：托盘图标与菜单交互封装
+- **scheduler**：封装对 Windows 任务计划程序的操作，用于注册开机启动
+- **main**：程序入口，初始化 ImGui / D3D11 /窗口/逻辑循环
 
 ## 常见问题
 
@@ -122,23 +207,13 @@
 - 灵动岛只在显示区域内捕获鼠标
 - 非显示区域的鼠标事件会透传给下层窗口
 
-## 开发指南
+## 开发说明
 
-### 项目结构
-- `src/`：源代码目录
-- `include/`：第三方库（ImGui）
-- `build/`：构建输出目录
-
-### 主要文件
-- `src/main.cpp`：主程序入口
-- `src/sysinfo.cpp`：系统信息获取
-- `src/trayicon.cpp`：系统托盘管理
-- `src/config.cpp`：配置管理
-- `src/transferstation.cpp`：文件中转站（可选）
-
-### 开发命令
-- **构建**：`cmake --build build`
-- **清理**：`cmake --build build --target clean`
+- **UI 界面**：依赖 ImGui，渲染使用 imgui_impl_win32.cpp 和 imgui_impl_dx11.cpp
+- **图标资源**：位于 assets/，程序运行时会从该目录加载 icon.png
+- **日志**：写入 dynamicisland.log，用于调试
+- **系统监控**：通过 PDH、WMI、NVML 动态链接获取数据
+- **任务计划器**：接口封装对 COM 的使用，可注册隐藏启动任务
 
 ## 贡献
 
@@ -152,14 +227,13 @@
 
 ## 许可证
 
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
+本项目采用 AGPL‑3.0 许可证。详见 [LICENSE](LICENSE) 文件。
 
 ## 致谢
 
 - **ImGui**：Dear ImGui 库提供了优秀的即时模式 GUI
 - **DirectX**：微软的图形 API
 - **苹果灵动岛**：灵感来源
-
 
 ---
 
