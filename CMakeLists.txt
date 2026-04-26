@@ -30,6 +30,7 @@ set(PROJECT_SOURCES
     src/scheduler.cpp
     src/trayicon.cpp
     src/config.cpp
+    src/transferstation.cpp
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES} ${IMGUI_SOURCES})
@@ -43,7 +44,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME}
     d3d11 dxgi d3dcompiler dwmapi pdh wbemuuid taskschd
     shell32 ole32 oleaut32 uuid winmm gdi32 user32
-    advapi32 setupapi psapi iphlpapi ws2_32 gdiplus
+    advapi32 setupapi psapi iphlpapi ws2_32 gdiplus shlwapi
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

@@ -61,12 +61,210 @@ void Config::ResetToDefaults() {
 
 bool Config::Load() {
     std::lock_guard<std::mutex> lock(mtx);
-    // 暂时跳过文件操作，直接使用默认值
+    
+    std::string path = GetConfigPath();
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        // 配置文件不存在，使用默认值
+        return false;
+    }
+    
+    try {
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+        file.close();
+        
+        // 简单的 JSON 解析
+        // 解析 island 配置
+        size_t island_pos = content.find("\"island\":");
+        if (island_pos != std::string::npos) {
+            size_t start = content.find("{", island_pos);
+            size_t end = content.find("}", start);
+            if (start != std::string::npos && end != std::string::npos) {
+                std::string island_content = content.substr(start + 1, end - start - 1);
+                
+                // 解析 position
+                size_t pos_pos = island_content.find("\"position\":");
+                if (pos_pos != std::string::npos) {
+                    size_t quote_start = island_content.find("\"", pos_pos + 10);
+                    size_t quote_end = island_content.find("\"", quote_start + 1);
+                    if (quote_start != std::string::npos && quote_end != std::string::npos) {
+                        island.position = island_content.substr(quote_start + 1, quote_end - quote_start - 1);
+                    }
+                }
+                
+                // 解析 offset_x
+                size_t offset_x_pos = island_content.find("\"offset_x\":");
+                if (offset_x_pos != std::string::npos) {
+                    size_t value_start = island_content.find_first_of("0123456789", offset_x_pos + 10);
+                    size_t value_end = island_content.find_first_of(",}", value_start);
+                    if (value_start != std::string::npos && value_end != std::string::npos) {
+                        island.offset_x = std::stoi(island_content.substr(value_start, value_end - value_start));
+                    }
+                }
+                
+                // 解析 offset_y
+                size_t offset_y_pos = island_content.find("\"offset_y\":");
+                if (offset_y_pos != std::string::npos) {
+                    size_t value_start = island_content.find_first_of("0123456789", offset_y_pos + 10);
+                    size_t value_end = island_content.find_first_of(",}", value_start);
+                    if (value_start != std::string::npos && value_end != std::string::npos) {
+                        island.offset_y = std::stoi(island_content.substr(value_start, value_end - value_start));
+                    }
+                }
+            }
+        }
+        
+        // 解析 appearance 配置
+        size_t appearance_pos = content.find("\"appearance\":");
+        if (appearance_pos != std::string::npos) {
+            size_t start = content.find("{", appearance_pos);
+            size_t end = content.find("}", start);
+            if (start != std::string::npos && end != std::string::npos) {
+                std::string appearance_content = content.substr(start + 1, end - start - 1);
+                
+                // 解析 theme
+                size_t theme_pos = appearance_content.find("\"theme\":");
+                if (theme_pos != std::string::npos) {
+                    size_t quote_start = appearance_content.find("\"", theme_pos + 8);
+                    size_t quote_end = appearance_content.find("\"", quote_start + 1);
+                    if (quote_start != std::string::npos && quote_end != std::string::npos) {
+                        appearance.theme = appearance_content.substr(quote_start + 1, quote_end - quote_start - 1);
+                    }
+                }
+                
+                // 解析 opacity
+                size_t opacity_pos = appearance_content.find("\"opacity\":");
+                if (opacity_pos != std::string::npos) {
+                    size_t value_start = appearance_content.find_first_of("0123456789.", opacity_pos + 10);
+                    size_t value_end = appearance_content.find_first_of(",}", value_start);
+                    if (value_start != std::string::npos && value_end != std::string::npos) {
+                        appearance.opacity = std::stof(appearance_content.substr(value_start, value_end - value_start));
+                    }
+                }
+                
+                // 解析 style
+                size_t style_pos = appearance_content.find("\"style\":");
+                if (style_pos != std::string::npos) {
+                    size_t quote_start = appearance_content.find("\"", style_pos + 8);
+                    size_t quote_end = appearance_content.find("\"", quote_start + 1);
+                    if (quote_start != std::string::npos && quote_end != std::string::npos) {
+                        appearance.style = appearance_content.substr(quote_start + 1, quote_end - quote_start - 1);
+                    }
+                }
+            }
+        }
+        
+        // 解析 behavior 配置
+        size_t behavior_pos = content.find("\"behavior\":");
+        if (behavior_pos != std::string::npos) {
+            size_t start = content.find("{", behavior_pos);
+            size_t end = content.find("}", start);
+            if (start != std::string::npos && end != std::string::npos) {
+                std::string behavior_content = content.substr(start + 1, end - start - 1);
+                
+                // 解析 start_with_windows
+                size_t start_with_windows_pos = behavior_content.find("\"start_with_windows\":");
+                if (start_with_windows_pos != std::string::npos) {
+                    size_t value_start = start_with_windows_pos + 21;
+                    size_t value_end = behavior_content.find_first_of(",}", value_start);
+                    if (value_end != std::string::npos) {
+                        std::string value = behavior_content.substr(value_start, value_end - value_start);
+                        behavior.start_with_windows = (value == "true");
+                    }
+                }
+                
+                // 解析 start_minimized
+                size_t start_minimized_pos = behavior_content.find("\"start_minimized\":");
+                if (start_minimized_pos != std::string::npos) {
+                    size_t value_start = start_minimized_pos + 20;
+                    size_t value_end = behavior_content.find_first_of(",}", value_start);
+                    if (value_end != std::string::npos) {
+                        std::string value = behavior_content.substr(value_start, value_end - value_start);
+                        behavior.start_minimized = (value == "true");
+                    }
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        // 解析错误，使用默认值
+        return false;
+    }
+    
     return true;
 }
 
 bool Config::Save() {
     std::lock_guard<std::mutex> lock(mtx);
-    // 暂时跳过文件操作
+    
+    std::string path = GetConfigPath();
+    std::ofstream file(path);
+    if (!file.is_open()) {
+        return false;
+    }
+    
+    try {
+        file << "{\n";
+        
+        // 保存 island 配置
+        file << "  \"island\": {\n";
+        file << "    \"position\": \"" << SimpleJSON::EscapeString(island.position) << "\",\n";
+        file << "    \"offset_x\": " << island.offset_x << ",\n";
+        file << "    \"offset_y\": " << island.offset_y << ",\n";
+        file << "    \"idle_width\": " << island.idle_width << ",\n";
+        file << "    \"idle_height\": " << island.idle_height << ",\n";
+        file << "    \"expanded_width\": " << island.expanded_width << ",\n";
+        file << "    \"expanded_height\": " << island.expanded_height << ",\n";
+        file << "    \"animation_speed\": " << SimpleJSON::FormatFloat(island.animation_speed) << ",\n";
+        file << "    \"auto_hide_delay\": " << SimpleJSON::FormatFloat(island.auto_hide_delay) << ",\n";
+        file << "    \"show_seconds\": " << (island.show_seconds ? "true" : "false") << "\n";
+        file << "  },\n";
+        
+        // 保存 appearance 配置
+        file << "  \"appearance\": {\n";
+        file << "    \"theme\": \"" << SimpleJSON::EscapeString(appearance.theme) << "\",\n";
+        file << "    \"accent_color\": \"" << SimpleJSON::EscapeString(appearance.accent_color) << "\",\n";
+        file << "    \"opacity\": " << SimpleJSON::FormatFloat(appearance.opacity) << ",\n";
+        file << "    \"corner_radius\": " << SimpleJSON::FormatFloat(appearance.corner_radius) << ",\n";
+        file << "    \"shadow_enabled\": " << (appearance.shadow_enabled ? "true" : "false") << ",\n";
+        file << "    \"blur_enabled\": " << (appearance.blur_enabled ? "true" : "false") << ",\n";
+        file << "    \"font_size\": " << appearance.font_size << ",\n";
+        file << "    \"font_family\": \"" << SimpleJSON::EscapeString(appearance.font_family) << "\",\n";
+        file << "    \"style\": \"" << SimpleJSON::EscapeString(appearance.style) << "\"\n";
+        file << "  },\n";
+        
+        // 保存 system 配置
+        file << "  \"system\": {\n";
+        file << "    \"update_interval_ms\": " << system.update_interval_ms << ",\n";
+        file << "    \"cpu_enabled\": " << (system.cpu_enabled ? "true" : "false") << ",\n";
+        file << "    \"gpu_enabled\": " << (system.gpu_enabled ? "true" : "false") << ",\n";
+        file << "    \"memory_enabled\": " << (system.memory_enabled ? "true" : "false") << ",\n";
+        file << "    \"battery_enabled\": " << (system.battery_enabled ? "true" : "false") << ",\n";
+        file << "    \"network_enabled\": " << (system.network_enabled ? "true" : "false") << "\n";
+        file << "  },\n";
+        
+        // 保存 behavior 配置
+        file << "  \"behavior\": {\n";
+        file << "    \"start_with_windows\": " << (behavior.start_with_windows ? "true" : "false") << ",\n";
+        file << "    \"start_minimized\": " << (behavior.start_minimized ? "true" : "false") << ",\n";
+        file << "    \"silent_mode\": " << (behavior.silent_mode ? "true" : "false") << ",\n";
+        file << "    \"game_mode_detection\": " << (behavior.game_mode_detection ? "true" : "false") << ",\n";
+        file << "    \"notification_enabled\": " << (behavior.notification_enabled ? "true" : "false") << ",\n";
+        file << "    \"max_notifications\": " << behavior.max_notifications << "\n";
+        file << "  }\n";
+        
+        file << "}";
+        
+        if (!file.good()) {
+            return false;
+        }
+        
+        file.close();
+    } catch (const std::exception& e) {
+        file.close();
+        return false;
+    }
+    
     return true;
 }

@@ -93,14 +93,25 @@ void SysInfoManager::StopMonitoring() {
 }
 
 void SysInfoManager::MonitoringLoop() {
+    int tick = 0;
     while (running) {
+        // 每帧更新 CPU 和内存信息（高频更新）
         UpdateCPU();
-        UpdateGPU();
         UpdateMemory();
-        UpdateBattery();
-        UpdateNetwork();
+        
+        // 每 2 帧更新电池信息（中频更新）
+        if (tick % 2 == 0) {
+            UpdateBattery();
+            UpdateNetwork();
+        }
+        
+        // 每 5 帧更新 GPU 信息（低频更新，因为 WMI 查询较慢）
+        if (tick % 5 == 0) {
+            UpdateGPU();
+        }
         
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        tick++;
     }
 }
 
@@ -221,8 +232,154 @@ void SysInfoManager::UpdateGPU() {
                 gpuData.temperature = static_cast<float>(temp);
             }
         }
+    } else {
+        // 为 AMD 和 Intel 显卡添加基本监控支持
+        UpdateGPUWMI();
     }
-    // AMD和Intel GPU监控可以通过WMI实现，这里简化处理
+}
+
+void SysInfoManager::UpdateGPUWMI() {
+    // 通过 WMI 获取 GPU 信息
+    HRESULT hres;
+    
+    // 初始化 COM
+    hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+    if (FAILED(hres)) {
+        return;
+    }
+    
+    // 设置安全级别
+    hres = CoInitializeSecurity(
+        NULL, 
+        -1, 
+        NULL, 
+        NULL, 
+        RPC_C_AUTHN_LEVEL_DEFAULT, 
+        RPC_C_IMP_LEVEL_IMPERSONATE, 
+        NULL, 
+        EOAC_NONE, 
+        NULL
+    );
+    
+    if (FAILED(hres)) {
+        CoUninitialize();
+        return;
+    }
+    
+    // 创建 WMI 服务连接
+    IWbemLocator *pLoc = NULL;
+    hres = CoCreateInstance(
+        CLSID_WbemLocator, 
+        0, 
+        CLSCTX_INPROC_SERVER, 
+        IID_IWbemLocator, 
+        (LPVOID *)&pLoc
+    );
+    
+    if (FAILED(hres)) {
+        CoUninitialize();
+        return;
+    }
+    
+    IWbemServices *pSvc = NULL;
+    BSTR bstrNamespace = SysAllocString(L"ROOT\\CIMV2");
+    hres = pLoc->ConnectServer(
+        bstrNamespace, 
+        NULL, 
+        NULL, 
+        NULL, 
+        0, 
+        NULL, 
+        NULL, 
+        &pSvc
+    );
+    SysFreeString(bstrNamespace);
+    
+    if (FAILED(hres)) {
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+    
+    // 设置代理安全级别
+    hres = CoSetProxyBlanket(
+        pSvc, 
+        RPC_C_AUTHN_WINNT, 
+        RPC_C_AUTHZ_NONE, 
+        NULL, 
+        RPC_C_AUTHN_LEVEL_CALL, 
+        RPC_C_IMP_LEVEL_IMPERSONATE, 
+        NULL, 
+        EOAC_NONE
+    );
+    
+    if (FAILED(hres)) {
+        pSvc->Release();
+        pLoc->Release();
+        CoUninitialize();
+        return;
+    }
+    
+    // 查询 GPU 信息
+    IEnumWbemClassObject* pEnumerator = NULL;
+    BSTR bstrQueryLanguage = SysAllocString(L"WQL");
+    BSTR bstrQuery = SysAllocString(L"SELECT * FROM Win32_VideoController");
+    hres = pSvc->ExecQuery(
+        bstrQueryLanguage, 
+        bstrQuery, 
+        WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, 
+        NULL, 
+        &pEnumerator
+    );
+    SysFreeString(bstrQueryLanguage);
+    SysFreeString(bstrQuery);
+    
+    if (SUCCEEDED(hres)) {
+        IWbemClassObject *pclsObj = NULL;
+        ULONG uReturn = 0;
+        
+        while (pEnumerator) {
+            hres = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+            
+            if (0 == uReturn) {
+                break;
+            }
+            
+            // 获取 GPU 名称
+            VARIANT vtProp;
+            VariantInit(&vtProp);
+            
+            // 名称
+            BSTR bstrName = SysAllocString(L"Name");
+            hres = pclsObj->Get(bstrName, 0, &vtProp, 0, 0);
+            SysFreeString(bstrName);
+            if (SUCCEEDED(hres) && vtProp.vt == VT_BSTR) {
+                char name[256] = {};
+                WideCharToMultiByte(CP_ACP, 0, vtProp.bstrVal, -1, name, 256, nullptr, nullptr);
+                gpuData.name = name;
+            }
+            VariantClear(&vtProp);
+            
+            // 显存大小
+            VariantInit(&vtProp);
+            BSTR bstrRAM = SysAllocString(L"AdapterRAM");
+            hres = pclsObj->Get(bstrRAM, 0, &vtProp, 0, 0);
+            SysFreeString(bstrRAM);
+            if (SUCCEEDED(hres) && vtProp.vt == VT_I4) {
+                gpuData.memory_total_mb = vtProp.lVal / (1024.0f * 1024.0f);
+            }
+            VariantClear(&vtProp);
+            
+            pclsObj->Release();
+        }
+    }
+    
+    // 清理
+    if (pEnumerator) pEnumerator->Release();
+    if (pSvc) pSvc->Release();
+    if (pLoc) pLoc->Release();
+    
+    CoUninitialize();
 }
 
 void SysInfoManager::UpdateMemory() {
@@ -316,9 +473,14 @@ void SysInfoManager::UpdateNetwork() {
                 uint64_t downloadDiff = totalDownload - prevDownloadBytes;
                 uint64_t uploadDiff = totalUpload - prevUploadBytes;
                 
+                // 平滑处理，避免速度突变
+                float downloadSpeed = (downloadDiff * 8.0f) / (seconds * 1000000.0f);
+                float uploadSpeed = (uploadDiff * 8.0f) / (seconds * 1000000.0f);
+                
                 std::lock_guard<std::mutex> lock(dataMutex);
-                networkData.download_speed_mbps = (downloadDiff * 8.0f) / (seconds * 1000000.0f);
-                networkData.upload_speed_mbps = (uploadDiff * 8.0f) / (seconds * 1000000.0f);
+                // 使用移动平均滤波
+                networkData.download_speed_mbps = networkData.download_speed_mbps * 0.7f + downloadSpeed * 0.3f;
+                networkData.upload_speed_mbps = networkData.upload_speed_mbps * 0.7f + uploadSpeed * 0.3f;
                 networkData.total_download_bytes = totalDownload;
                 networkData.total_upload_bytes = totalUpload;
                 networkData.is_connected = true;

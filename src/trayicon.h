@@ -61,7 +61,7 @@ public:
     void HandleMessage(WPARAM wParam, LPARAM lParam);
     
     // 更新菜单状态
-    void UpdateMenuState(bool isVisible, PerformanceMode perfMode, 
+    void UpdateMenuState(bool isVisible, bool isExpanded, PerformanceMode perfMode, 
                          IslandPosition position, bool startupEnabled);
     
     // 显示气泡提示
@@ -95,6 +95,7 @@ private:
     
     // 状态
     bool isVisible = true;
+    bool isExpanded = false; // 灵动岛是否展开
     PerformanceMode currentPerfMode = PerformanceMode::BALANCED;
     IslandPosition currentPosition = IslandPosition::TOP_CENTER;
     bool startupEnabled = true;

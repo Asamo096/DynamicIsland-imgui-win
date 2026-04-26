@@ -105,9 +105,11 @@ private:
     // 各数据采集函数
     void UpdateCPU();
     void UpdateGPU();
+    void UpdateGPUWMI();
     void UpdateMemory();
     void UpdateBattery();
     void UpdateNetwork();
+    void UpdateNetworkLegacy();
     
     // GPU检测和初始化
     void DetectGPU();

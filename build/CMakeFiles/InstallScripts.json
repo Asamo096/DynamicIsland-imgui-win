@@ -1,7 +1,7 @@
 {
 	"InstallScripts" : 
 	[
-		"D:/DynamicIsland/build/cmake_install.cmake"
+		"D:/DynamicIsland-imgui-win/build/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

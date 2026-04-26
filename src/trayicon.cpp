@@ -93,25 +93,28 @@ void TrayIcon::Shutdown() {
 void TrayIcon::CreateMenu() {
     // 创建主菜单
     hMenu = CreatePopupMenu();
-    
+
     // 展开面板
     AppendMenu(hMenu, MF_STRING, (UINT)TrayCommand::EXPAND_PANEL, TEXT("展开面板"));
     AppendMenu(hMenu, MF_SEPARATOR, 0, nullptr);
-    
+
+    // 设置
+    AppendMenu(hMenu, MF_STRING, (UINT)TrayCommand::SETTINGS, TEXT("设置"));
+
     // 性能模式子菜单
     hPerfMenu = CreatePopupMenu();
     AppendMenu(hPerfMenu, MF_STRING, (UINT)TrayCommand::PERF_POWER_SAVE, TEXT("省电 (5秒刷新)"));
     AppendMenu(hPerfMenu, MF_STRING, (UINT)TrayCommand::PERF_BALANCED, TEXT("平衡 (1秒刷新)"));
     AppendMenu(hPerfMenu, MF_STRING, (UINT)TrayCommand::PERF_PERFORMANCE, TEXT("性能 (0.5秒刷新)"));
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hPerfMenu, TEXT("性能模式"));
-    
 
-    
+
+
     AppendMenu(hMenu, MF_SEPARATOR, 0, nullptr);
-    
+
     // 开机启动
     AppendMenu(hMenu, MF_STRING, (UINT)TrayCommand::STARTUP_TOGGLE, TEXT("开机启动"));
-    
+
     // 退出
     AppendMenu(hMenu, MF_STRING, (UINT)TrayCommand::EXIT, TEXT("退出"));
 }
@@ -129,7 +132,7 @@ void TrayIcon::ShowContextMenu() {
     if (!hMenu || !hwnd) return;
     
     // 更新菜单状态
-    UpdateMenuState(isVisible, currentPerfMode, currentPosition, startupEnabled);
+    UpdateMenuState(isVisible, isExpanded, currentPerfMode, currentPosition, startupEnabled);
     
     // 获取鼠标位置
     POINT pt;
@@ -159,6 +162,9 @@ void TrayIcon::HandleMessage(WPARAM wParam, LPARAM lParam) {
             case TrayCommand::EXPAND_PANEL:
                 if (onExpand) onExpand();
                 break;
+            case TrayCommand::SETTINGS:
+                if (onSettings) onSettings();
+                break;
             case TrayCommand::PERF_POWER_SAVE:
                 currentPerfMode = PerformanceMode::POWER_SAVE;
                 if (onPerformanceChange) onPerformanceChange(currentPerfMode);
@@ -182,9 +188,10 @@ void TrayIcon::HandleMessage(WPARAM wParam, LPARAM lParam) {
     }
 }
 
-void TrayIcon::UpdateMenuState(bool visible, PerformanceMode perfMode, 
+void TrayIcon::UpdateMenuState(bool visible, bool expanded, PerformanceMode perfMode, 
                                 IslandPosition position, bool startup) {
     isVisible = visible;
+    isExpanded = expanded;
     currentPerfMode = perfMode;
     currentPosition = position;
     startupEnabled = startup;
@@ -199,7 +206,10 @@ void TrayIcon::UpdateMenuState(bool visible, PerformanceMode perfMode,
     CheckMenuItem(hPerfMenu, (UINT)TrayCommand::PERF_PERFORMANCE, 
                   MF_BYCOMMAND | (perfMode == PerformanceMode::PERFORMANCE ? MF_CHECKED : MF_UNCHECKED));
     
-
+    // 更新展开面板菜单项文本
+    ModifyMenu(hMenu, (UINT)TrayCommand::EXPAND_PANEL, MF_BYCOMMAND | MF_STRING, 
+               (UINT)TrayCommand::EXPAND_PANEL, 
+               expanded ? TEXT("收起面板") : TEXT("展开面板"));
     
     // 更新开机启动勾选
     CheckMenuItem(hMenu, (UINT)TrayCommand::STARTUP_TOGGLE, 
